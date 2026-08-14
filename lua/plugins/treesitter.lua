@@ -3,12 +3,13 @@ return {
   lazy = false,
   build = ":TSUpdate",
   config = function()
-    -- Install parsers
-    require('nvim-treesitter').install({ 'go', 'lua', 'vim', 'vimdoc', 'query' })
-    
-    -- Enable highlighting for Go files
+    require('nvim-treesitter').install({
+      'go', 'java', 'kotlin', 'lua', 'javascript', 'typescript',
+      'python', 'json', 'yaml', 'html', 'css', 'vim', 'vimdoc', 'query',
+    })
+
     vim.api.nvim_create_autocmd('FileType', {
-      pattern = { 'go', 'lua' },
+      pattern = { 'go', 'java', 'kotlin', 'lua', 'javascript', 'typescript', 'python', 'json', 'yaml', 'html', 'css' },
       callback = function()
         vim.treesitter.start()
       end,
