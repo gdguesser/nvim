@@ -18,7 +18,8 @@ return {
           cmd = "go run " .. file
         elseif ft == "java" then
           local classname = vim.fn.expand("%:t:r")
-          cmd = "javac " .. file .. " && java " .. classname
+          local dir = vim.fn.expand("%:p:h")
+          cmd = "javac " .. file .. " && java -cp " .. dir .. " " .. classname
         elseif ft == "python" then
           cmd = "python3 " .. file
         elseif ft == "javascript" then
