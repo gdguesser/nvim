@@ -70,6 +70,67 @@ return {
       vim.lsp.config("pyright", {})
       vim.lsp.config("groovyls", {
         filetypes = { "groovy" },
+        -- groovyls is blind to Spock/jOOQ without the Gradle classpath; resolve it once and cache
+        on_new_config = function(config, root_dir)
+          local cache_dir = vim.fn.stdpath("cache") .. "/groovyls"
+          vim.fn.mkdir(cache_dir, "p")
+          local cache_file = cache_dir .. "/" .. vim.fn.fnamemodify(root_dir, ":t") .. ".txt"
+          local classpath = {}
+
+          local f = io.open(cache_file, "r")
+          if f then
+            for line in f:lines() do table.insert(classpath, line) end
+            f:close()
+          end
+
+          if #classpath == 0 then
+            local gradle_bin = vim.fn.filereadable(root_dir .. "/gradlew") == 1
+              and (root_dir .. "/gradlew") or "gradle"
+
+            local init_script = vim.fn.tempname() .. ".gradle"
+            local sf = io.open(init_script, "w")
+            if sf then
+              sf:write([[
+allprojects {
+  tasks.register("_nvimGroovylsClasspath") {
+    doLast {
+      configurations.findByName("testRuntimeClasspath")
+        ?.resolvedConfiguration?.resolvedArtifacts?.each { println it.file }
+      ["groovy/main","groovy/test","java/main","java/test"].each {
+        def d = new File(projectDir, "build/classes/$it")
+        if (d.exists()) println d.absolutePath
+      }
+    }
+  }
+}
+]])
+              sf:close()
+              vim.notify("groovyls: resolving Gradle classpath (first open, please wait)...", vim.log.levels.INFO)
+              local out = vim.fn.system({
+                gradle_bin, "-p", root_dir, "-q", "--console=plain",
+                "--init-script", init_script, "_nvimGroovylsClasspath",
+              })
+              vim.fn.delete(init_script)
+
+              for line in out:gmatch("[^\r\n]+") do
+                if line:match("%.jar$") or vim.fn.isdirectory(line) == 1 then
+                  table.insert(classpath, line)
+                end
+              end
+
+              if #classpath > 0 then
+                local cf = io.open(cache_file, "w")
+                if cf then cf:write(table.concat(classpath, "\n")); cf:close() end
+              end
+            end
+          end
+
+          if #classpath > 0 then
+            config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
+              groovy = { classpath = classpath },
+            })
+          end
+        end,
       })
     end,
   },
