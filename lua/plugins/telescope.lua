@@ -11,6 +11,14 @@ return {
 
       telescope.setup({
         defaults = {
+          path_display = function(_, path)
+            local tail = vim.fs.basename(path)
+            local parent = vim.fs.dirname(path)
+            if parent == "." then
+              return tail
+            end
+            return string.format("%s  (%s)", tail, parent)
+          end,
           mappings = {
             i = {
               ["<C-j>"] = actions.move_selection_next,
@@ -18,7 +26,7 @@ return {
               ["<C-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
             },
           },
-          file_ignore_patterns = { "node_modules", ".git/", "target/", "build/" },
+          file_ignore_patterns = { "^bin/", "node_modules", ".git/", "target/", "build/" },
         },
       })
 
