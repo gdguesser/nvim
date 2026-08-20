@@ -70,8 +70,23 @@ return {
       vim.lsp.config("pyright", {})
       vim.lsp.config("groovyls", {
         filetypes = { "groovy" },
-        -- groovyls is blind to Spock/jOOQ without the Gradle classpath; resolve it once and cache
         on_new_config = function(config, root_dir)
+          -- Run groovyls JAR directly so we can pass JVM flags; the Mason wrapper doesn't allow this
+          local mason_pkg = vim.fn.stdpath("data") .. "/mason/packages/groovy-language-server"
+          local jar = vim.fn.glob(mason_pkg .. "/**/*-all.jar"):gsub("\n.*", "")
+          if jar == "" then
+            jar = vim.fn.glob(mason_pkg .. "/**/*.jar"):gsub("\n.*", "")
+          end
+          if jar ~= "" then
+            config.cmd = {
+              "java", "-Xmx512m",
+              "--add-opens=java.base/java.lang=ALL-UNNAMED",
+              "--add-opens=java.base/java.util=ALL-UNNAMED",
+              "-jar", jar,
+            }
+          end
+
+          -- Resolve and cache Gradle test classpath
           local cache_dir = vim.fn.stdpath("cache") .. "/groovyls"
           vim.fn.mkdir(cache_dir, "p")
           local cache_file = cache_dir .. "/" .. vim.fn.fnamemodify(root_dir, ":t") .. ".txt"
@@ -125,9 +140,26 @@ allprojects {
             end
           end
 
-          if #classpath > 0 then
+          -- Trim to Spock-essential JARs only; passing full transitive deps overloads groovyls
+          local keep = { "spock", "groovy", "junit", "hamcrest", "bytebuddy", "objenesis", "asm" }
+          local filtered = {}
+          for _, path in ipairs(classpath) do
+            if vim.fn.isdirectory(path) == 1 then
+              table.insert(filtered, path)
+            else
+              local lpath = path:lower()
+              for _, pat in ipairs(keep) do
+                if lpath:match(pat) then
+                  table.insert(filtered, path)
+                  break
+                end
+              end
+            end
+          end
+
+          if #filtered > 0 then
             config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
-              groovy = { classpath = classpath },
+              groovy = { classpath = filtered },
             })
           end
         end,
