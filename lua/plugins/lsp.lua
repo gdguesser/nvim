@@ -90,12 +90,12 @@ return {
             local init_script = vim.fn.tempname() .. ".gradle"
             local sf = io.open(init_script, "w")
             if sf then
+              -- .resolve() works even before a full build; .resolvedArtifacts requires prior resolution
               sf:write([[
 allprojects {
   tasks.register("_nvimGroovylsClasspath") {
     doLast {
-      configurations.findByName("testRuntimeClasspath")
-        ?.resolvedConfiguration?.resolvedArtifacts?.each { println it.file }
+      configurations.findByName("testRuntimeClasspath")?.resolve()?.each { println it }
       ["groovy/main","groovy/test","java/main","java/test"].each {
         def d = new File(projectDir, "build/classes/$it")
         if (d.exists()) println d.absolutePath
@@ -132,6 +132,14 @@ allprojects {
           end
         end,
       })
+
+      vim.api.nvim_create_user_command("GroovylsRefreshClasspath", function()
+        local cache_dir = vim.fn.stdpath("cache") .. "/groovyls"
+        local cache_file = cache_dir .. "/" .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t") .. ".txt"
+        vim.fn.delete(cache_file)
+        vim.cmd("LspRestart groovyls")
+        vim.notify("groovyls: classpath cache cleared, restarting...", vim.log.levels.INFO)
+      end, { desc = "Re-resolve Gradle classpath for groovyls" })
     end,
   },
 
