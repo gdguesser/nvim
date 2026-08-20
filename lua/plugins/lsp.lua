@@ -137,8 +137,10 @@ allprojects {
         local cache_dir = vim.fn.stdpath("cache") .. "/groovyls"
         local cache_file = cache_dir .. "/" .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t") .. ".txt"
         vim.fn.delete(cache_file)
-        vim.cmd("LspRestart groovyls")
-        vim.notify("groovyls: classpath cache cleared, restarting...", vim.log.levels.INFO)
+        for _, client in pairs(vim.lsp.get_clients({ name = "groovyls" })) do
+          vim.lsp.stop_client(client.id, true)
+        end
+        vim.notify("groovyls: classpath cache cleared, reopen the file to restart", vim.log.levels.INFO)
       end, { desc = "Re-resolve Gradle classpath for groovyls" })
     end,
   },
