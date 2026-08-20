@@ -6,6 +6,7 @@ return {
       "nvim-treesitter/nvim-treesitter",
       "nvim-neotest/neotest-go",
       "nvim-neotest/nvim-nio", -- 🔴 REQUIRED
+      "rcasia/neotest-java",
     },
     config = function()
       local neotest = require("neotest")
@@ -16,6 +17,9 @@ return {
             experimental = {
               test_table = true,
             },
+          }),
+          require("neotest-java")({
+            ignore_wrapper = false, -- use gradlew/mvnw when present
           }),
         },
       })

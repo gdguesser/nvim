@@ -15,6 +15,11 @@ return {
           "jdtls",
           "lua_ls",
           "pyright",
+          "groovyls",
+        },
+        -- jdtls must not be auto-enabled here; nvim-jdtls manages it exclusively
+        automatic_enable = {
+          exclude = { "jdtls" },
         },
       })
     end,
@@ -63,6 +68,9 @@ return {
         },
       })
       vim.lsp.config("pyright", {})
+      vim.lsp.config("groovyls", {
+        filetypes = { "groovy" },
+      })
     end,
   },
 
